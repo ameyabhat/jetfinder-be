@@ -6,7 +6,6 @@ This system processes emails from a RabbitMQ queue, identifies private jet chart
 
 - RabbitMQ integration for email queue processing
 - OpenAI GPT-4 integration for email analysis
-- Automated email response system
 - BCC functionality for team notifications
 
 ## Setup
@@ -28,7 +27,6 @@ This system processes emails from a RabbitMQ queue, identifies private jet chart
 5. Configure the following environment variables in `.env`:
    - OpenAI API key
    - RabbitMQ credentials
-   - SMTP server details
 
 ## Running RabbitMQ with Docker
 
@@ -63,7 +61,6 @@ The project includes a Docker Compose file to run RabbitMQ locally:
   - `email_processor.py`: Main orchestration logic
   - `rabbitmq_client.py`: RabbitMQ integration
   - `llm_analyzer.py`: OpenAI integration
-  - `email_sender.py`: Email sending functionality
 - `docker-compose.yml`: Docker configuration for RabbitMQ
 
 ## Adding External API Integration
