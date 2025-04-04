@@ -1,7 +1,8 @@
 import json
 from typing import Dict, Any
 
-from tools.flight_finder import FlightFinderClient
+
+from .tools.flight_finder import FlightFinderClient
 from .rabbitmq_client import RabbitMQClient
 from .llm_analyzer import LLMAnalyzer
 
@@ -10,12 +11,10 @@ class EmailProcessor:
         self,
         rabbitmq_client: RabbitMQClient,
         llm_analyzer: LLMAnalyzer,
-        email_sender: EmailSender,
 		flight_finder: FlightFinderClient
     ):
         self.rabbitmq_client = rabbitmq_client
         self.llm_analyzer = llm_analyzer
-        self.email_sender = email_sender
         self.flight_finder = flight_finder
     
     def process_email(self, email_data: str):

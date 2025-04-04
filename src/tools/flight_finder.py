@@ -5,7 +5,6 @@ import requests
 import os
 from bs4 import BeautifulSoup
 from functools import reduce
-import curlify 
 
 flatmap = lambda f, xs: reduce(lambda acc, x: acc + f(x), xs, [])
 
@@ -18,7 +17,7 @@ class FlightFinderClient:
 		self.session = requests.Session()  
 		# This is hardcoded for now, but we're going to need to get this from the login page
 		# There's a captcha on the login page that we need to solve, i don't want to deal with that right now
-		self.session.cookies.set(self.CookieCi, '5f7cd616286df17946b54a304e58c3af6bef3525')
+		self.session.cookies.set(self.CookieCi, '5ea7148b274611b32c0028dfd83da06d8076f7c5')
 
 	def search(self, code: str):
 		# This call is only relevant to set the correct params on the cookie
