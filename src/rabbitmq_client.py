@@ -38,7 +38,7 @@ class RabbitMQClient:
                 retries += 1
                 logging.error(f"Failed to connect to RabbitMQ (attempt {retries}/{self.max_retries}): {str(e)}")
                 if retries < self.max_retries:
-                    time.sleep(self.retry_delay)
+                    time.sleep(self.retry_delay * (2 ** (retries - 1)))
                 else:
                     logging.error("Max retries reached. Could not connect to RabbitMQ.")
                     raise
