@@ -1,12 +1,21 @@
 import json
 from typing import Dict, Any
-
+from pprint import pprint
 
 from .tools.flight_finder import FlightFinderClient
 from .rabbitmq_client import RabbitMQClient
 from .email_processor import EmailProcessor
 
+import logging
+
 class SearchOrchestrator:
+    """
+    This class is responsible for orchestrating the search for vendor emails
+    """
+
+    FlightPlanError = "FlightPlanError"
+    NoVendorEmailsFound = "NoVendorEmailsFound"
+
     def __init__(
         self,
         rabbitmq_client: RabbitMQClient,
@@ -18,11 +27,8 @@ class SearchOrchestrator:
         self.flight_finder = flight_finder
     
     def process_email_external(self, message):
-        try:
-            self.process_email(message)
-        except Exception as e:
-            print(message, e)
-            return
+        self.process_email(message)
+        
 
     def process_email(self, message):
         """Process a single email"""
@@ -40,25 +46,53 @@ class SearchOrchestrator:
         email_content = message.get('content', '')
 
         if email_content == "":
-            print("No email content")
+            logging.info("No email content")
             return
         
         # Analyze the email using LLM
+        logging.info("Analyzing email ...")
         analysis = self.email_processor.analyze_incoming_email(email_content)
 
+        # If it's not a jet charter request, don't process it
         if not analysis.get('is_charter_request'):
+            logging.info("Not a charter request")
             return
 
-        if not self.email_processor.validate_flight_dates(analysis):           
+        logging.info("Validating flight dates ...")
+        if not self.email_processor.validate_flight_plan(analysis):           
+            response = { "error": self.FlightPlanError, "email_id": message.get('email_id'), "message": message }
+
+            self.rabbitmq_client.send_message(
+                queue_name='internal_error',
+                message=response
+            )
+
+            self.rabbitmq_client.send_message(
+                queue_name='manual_intervention',
+                message=response
+            )
+
             print("Invalid flight responses - llm needs to get better at handling these")
             return
 
-        # If it's not a jet charter request, don't process it
-        details = analysis["details"]
 
 		# This is only finding the vendor emails for the first flight
-        vendor_emails = self.flight_finder.search(details["origin"], int(details["flights"][0]["passengers"]))
-        email = self.email_processor.build_email(details)
+        logging.info("Searching for vendor emails ...")
+        vendor_emails = self.flight_finder.search(analysis["flights"][0]["origin"], analysis["flights"][0]["passengers"])
+
+        if len(vendor_emails) == 0:
+            response = { "error": self.NoVendorEmailsFound, "email_id": message.get('email_id'), "message": message }
+
+            self.rabbitmq_client.send_message(
+                queue_name='manual_intervention',
+                message=response
+            )
+
+            logging.info("No vendor emails found")
+            return
+
+        logging.info("Building email ...")
+        email = self.email_processor.build_email(analysis)
 
         response = {
             "vendor_emails": vendor_emails,
@@ -66,7 +100,13 @@ class SearchOrchestrator:
             "subject": email["subject"]
         }
 
-        self.email_processor.send_email(email)
+        pprint (response)
+        
+        self.rabbitmq_client.send_message(
+            queue_name='vendor_outreach',
+            message=response
+        )
+
         return vendor_emails
         # Construct and send the response email
         

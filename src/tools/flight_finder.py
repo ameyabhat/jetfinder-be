@@ -1,4 +1,5 @@
 from enum import Enum
+import logging
 import re
 from typing import Optional, Dict, Any, Union
 import requests
@@ -17,11 +18,12 @@ class FlightFinderClient:
 		self.session = requests.Session()  
 		# This is hardcoded for now, but we're going to need to get this from the login page
 		# There's a captcha on the login page that we need to solve, i don't want to deal with that right now
-		self.session.cookies.set(self.CookieCi, '5ea7148b274611b32c0028dfd83da06d8076f7c5')
+		self.session.cookies.set(self.CookieCi, '5f207ba2e44ec7c4c3c2726f7c810ee862ee562c')
 
 	def search(self, code: str, pax: int):
+		logging.info("Searching for vendor emails with code: %s and pax: %s", code, pax)
 		# This call is only relevant to set the correct params on the cookie
-		response = self.search_results(code, pax)
+		response = self.search_results(code, pax=pax)
 		htmlResponse = self.search_results_ajax(start=0, length=12)['data']
 		
 		vendorIds = list(set(map(lambda x: int(x), (flatmap(self.parse_search_results, htmlResponse)))))

@@ -71,6 +71,9 @@ class RabbitMQClient:
     def send_message(self, queue_name: str, message: Dict[str, Any]):
         """Send a message to the specified queue"""
         self.ensure_connection()
+        # Declare the queue before publishing to ensure it exists
+        self.channel.queue_declare(queue=queue_name)
+
         self.channel.basic_publish(
             exchange='',
             routing_key=queue_name,

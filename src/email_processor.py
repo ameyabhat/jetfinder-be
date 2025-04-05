@@ -2,7 +2,7 @@ import json
 import os
 from openai import OpenAI
 from typing import Dict, Any, Optional, List, Tuple
-from datetime import date
+from datetime import date, datetime
 
 class EmailProcessor:
 	example_client_completion = """
@@ -152,7 +152,7 @@ class EmailProcessor:
 		"""
 		
 		response = self.client.chat.completions.create(
-			model="gpt-4-turbo-preview",
+			model="gpt-4o-mini",
 			messages=[
 				{"role": "system", "content": "You are an AI assistant that analyzes emails for private jet charter requests."},
 				{"role": "user", "content": prompt}
@@ -166,8 +166,11 @@ class EmailProcessor:
 			print(e)
 
 	def build_email(self, flight_info: Dict[str, Any]) -> Dict[str, Any]:
-		subject = self.build_subject(flight_info["flights"])
-		body = self.build_body(flight_info["flights"])
+		routes, dates = self.parse_flight_dates(flight_info["flights"])
+
+		subject = self.build_subject(routes, dates, flight_info["flights"][0]["aircraft_size"])
+		#  TODO: This is just using the first flight in the list - we need to be smarter about this
+		body = self.build_body(routes, dates, flight_info["flights"][0]["passengers"])
 
 		return {
 			"subject": subject,
@@ -175,21 +178,26 @@ class EmailProcessor:
 		}
 
 	def parse_flight_dates(self, flights: List[Dict[str, Any]]) -> List[Tuple[str, any]]:
-		parsed_flights = list(map(lambda flight: (flight["origin"], flight["destination"], date(flight["travel_date"])), flights))
+		print([fl["travel_date"] for fl in flights])
+		parsed_flights = list(map(lambda flight: (
+			flight["origin"], 
+			flight["destination"], 
+			datetime.strptime(flight["travel_date"], "%Y-%m-%d %H:%M UTC").date()
+		), flights))
 
 		fmt_string = '%m/%d/%Y'
 
-		route = f"{parsed_flights[0][0]} to {parsed_flights[0][1]}"
-		dates = f"{parsed_flights[0][1].strftime(fmt_string)}"
+		route = f"{parsed_flights[0][0]} - {parsed_flights[0][1]}"
+		dates = f"{parsed_flights[0][2].strftime(fmt_string)}"
 		
 		for i in range(1, len(parsed_flights)):
-			route += f" to {parsed_flights[i][0]}"
-			dates += f" to {parsed_flights[i][1].strftime(fmt_string)}"
+			route += f" - {parsed_flights[i][0]}"
+			dates += f" - {parsed_flights[i][2].strftime(fmt_string)}"
 
 		return (route, dates)
 			
 
-	def validate_flight_dates(self, flight_info: Dict[str, Any]) -> bool:
+	def validate_flight_plan(self, flight_info: Dict[str, Any]) -> bool:
 		last_date = None
 		last_destination = None
 		if len(flight_info["flights"]) == 0:
@@ -217,7 +225,7 @@ class EmailProcessor:
 		
 
 	def build_subject(self, route, dates, size) -> str:
-		return f"{route} {dates} {size}"
+		return f"{route} | {dates} | {size}"
 
-	def build_body(self, route, dates) -> str:
-		return f"Hello team, can you please provide a quote for {route} {dates} "
+	def build_body(self, route, dates, passengers) -> str:
+		return f"Hello team, can you please provide a quote for {route} {dates}? {passengers} PAX.  Thank you!"
