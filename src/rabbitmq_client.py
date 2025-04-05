@@ -62,7 +62,7 @@ class RabbitMQClient:
     def consume_messages(self, queue_name: str, callback: Callable[[Dict[str, Any]], None]):
         """Start consuming messages from the specified queue"""
         self.ensure_connection()
-        self.channel.queue_declare(queue=queue_name)
+        self.channel.queue_declare(queue=queue_name, durable=True)
         self.channel.basic_consume(
             queue=queue_name,
             on_message_callback=lambda ch, method, properties, body: callback(json.loads(body)),
@@ -77,17 +77,26 @@ class RabbitMQClient:
             self.consume_messages(queue_name, callback)
 
 
-    def send_message(self, queue_name: str, message: Dict[str, Any]):
-        """Send a message to the specified queue"""
+    def send_message(self, queue_name: str, message: Dict[str, Any], persistent: bool = True):
         self.ensure_connection()
         # Declare the queue before publishing to ensure it exists
-        self.channel.queue_declare(queue=queue_name)
+        self.channel.queue_declare(queue=queue_name, durable=True)
+
+        # Set message properties based on persistence flag
+        properties = None
+        if persistent:
+            properties = pika.BasicProperties(
+                delivery_mode=2,  # 2 = persistent, 1 = non-persistent
+                content_type='application/json'
+            )
 
         self.channel.basic_publish(
             exchange='',
             routing_key=queue_name,
-            body=json.dumps(message)
+            body=json.dumps(message),
+            properties=properties
         )
+
     
     def close(self):
         """Close the RabbitMQ connection"""
