@@ -9,22 +9,22 @@ from functools import reduce
 
 flatmap = lambda f, xs: reduce(lambda acc, x: acc + f(x), xs, [])
 
-Capability = Enum('Capability', ['PASSENGER', 'CARGO', 'AMBULANCE'])
 class FlightFinderClient:
 	CookieCi = "ci_session"
 
 	def __init__(self, base_url: Optional[str] = None):
 		self.base_url = base_url or os.getenv('FLIGHT_FINDER_BASE_URL', '')
+		self.ci_session = os.getenv('FLIGHT_FINDER_CI_SESSION', '5f207ba2e44ec7c4c3c2726f7c810ee862ee562c')
 		self.session = requests.Session()  
 		# This is hardcoded for now, but we're going to need to get this from the login page
 		# There's a captcha on the login page that we need to solve, i don't want to deal with that right now
-		self.session.cookies.set(self.CookieCi, '5f207ba2e44ec7c4c3c2726f7c810ee862ee562c')
+		self.session.cookies.set(self.CookieCi, self.ci_session)
 
 	def search(self, code: str, pax: int):
 		logging.info("Searching for vendor emails with code: %s and pax: %s", code, pax)
 		# This call is only relevant to set the correct params on the cookie
-		response = self.search_results(code, pax=pax)
-		htmlResponse = self.search_results_ajax(start=0, length=12)['data']
+		self.search_results(code, pax=pax)
+		htmlResponse = self.search_results_ajax(start=0, length=30)['data']
 		
 		vendorIds = list(set(map(lambda x: int(x), (flatmap(self.parse_search_results, htmlResponse)))))
 

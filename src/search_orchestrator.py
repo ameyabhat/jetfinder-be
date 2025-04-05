@@ -102,6 +102,9 @@ class SearchOrchestrator:
 
         response = {
             "vendor_emails": vendor_emails,
+            "email_id": message.get('email_id'),
+            "thread_id": message.get('thread_id'),
+            "user_email": message.get('user_email'),
             "body": email["body"],
             "subject": email["subject"]
         }

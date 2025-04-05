@@ -116,7 +116,7 @@ class EmailProcessor:
 				{{
 					"origin": string or null,
 					"destination": string or null,
-					"travel_date": string or null,
+					"travel_date": string or null (the format MUST be YYYY-MM-DD HH:MM UTC),
 					"passengers": number or null,
 					"aircraft_size": string or null,
 				}}
