@@ -1,8 +1,8 @@
 import json
 import os
 from openai import OpenAI
-from typing import Dict, Any, Optional, List, Tuple
-from datetime import date, datetime
+from typing import Dict, Any, List, Tuple
+from datetime import datetime
 
 class EmailProcessor:
 	example_client_completion = """
@@ -163,11 +163,11 @@ class EmailProcessor:
 			print(e)
 
 	def build_email(self, flight_info: Dict[str, Any]) -> Dict[str, Any]:
-		routes, dates = self.parse_flight_dates(flight_info["flights"])
+		routes, dates, body_dates = self.parse_flight_dates(flight_info["flights"])
 
 		subject = self.build_subject(routes, dates, flight_info["flights"][0]["aircraft_size"])
 		#  TODO: This is just using the first flight in the list - we need to be smarter about this
-		body = self.build_body(routes, dates, flight_info["flights"][0]["passengers"])
+		body = self.build_body(routes, body_dates, flight_info["flights"][0]["passengers"])
 
 		return {
 			"subject": subject,
@@ -183,15 +183,18 @@ class EmailProcessor:
 		), flights))
 
 		fmt_string = '%m/%d/%Y'
+		body_fmt_string = '%m/%d/%Y %H:%M'
 
 		route = f"{parsed_flights[0][0]} - {parsed_flights[0][1]}"
 		dates = f"{parsed_flights[0][2].strftime(fmt_string)}"
-		
+		body_dates = f"{parsed_flights[0][2].strftime(body_fmt_string)}"
+
 		for i in range(1, len(parsed_flights)):
 			route += f" - {parsed_flights[i][0]}"
 			dates += f" - {parsed_flights[i][2].strftime(fmt_string)}"
-
-		return (route, dates)
+			body_dates += f" - {parsed_flights[i][2].strftime(body_fmt_string)}"
+		
+		return (route, dates, body_dates)
 			
 
 	def validate_flight_plan(self, flight_info: Dict[str, Any]) -> bool:
