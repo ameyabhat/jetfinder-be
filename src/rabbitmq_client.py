@@ -22,6 +22,7 @@ class RabbitMQClient:
                     username=os.getenv('RABBITMQ_USER', 'guest'),
                     password=os.getenv('RABBITMQ_PASSWORD', 'guest')
                 )
+
                 parameters = pika.ConnectionParameters(
                     host=os.getenv('RABBITMQ_HOST', 'localhost'),
                     port=int(os.getenv('RABBITMQ_PORT', 5672)),
@@ -65,6 +66,16 @@ class RabbitMQClient:
             self.connect()
             # Retry consuming
             self.consume_messages(queue_name, callback)
+
+
+    def send_message(self, queue_name: str, message: Dict[str, Any]):
+        """Send a message to the specified queue"""
+        self.ensure_connection()
+        self.channel.basic_publish(
+            exchange='',
+            routing_key=queue_name,
+            body=json.dumps(message)
+        )
     
     def close(self):
         """Close the RabbitMQ connection"""

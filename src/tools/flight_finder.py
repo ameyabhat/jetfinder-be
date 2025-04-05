@@ -19,16 +19,16 @@ class FlightFinderClient:
 		# There's a captcha on the login page that we need to solve, i don't want to deal with that right now
 		self.session.cookies.set(self.CookieCi, '5ea7148b274611b32c0028dfd83da06d8076f7c5')
 
-	def search(self, code: str):
+	def search(self, code: str, pax: int):
 		# This call is only relevant to set the correct params on the cookie
-		response = self.search_results(code)
+		response = self.search_results(code, pax)
 		htmlResponse = self.search_results_ajax(start=0, length=12)['data']
 		
 		vendorIds = list(set(map(lambda x: int(x), (flatmap(self.parse_search_results, htmlResponse)))))
 
-		vendorDetails = list(map(self.extract_mailto, map(self.get_vendor_details, vendorIds)))
+		vendorEmails = list(map(self.extract_mailto, map(self.get_vendor_details, vendorIds)))
 
-		return vendorDetails
+		return vendorEmails
 
 	def get_vendor_details(self, vendorId: int):
 		url = f"{self.base_url}/pages_view/vendor_details"
@@ -115,10 +115,6 @@ class FlightFinderClient:
 		self, 
 		start: int = 0,
 		length: int = 1,
-		draw: int = 0,
-		order_column: int = 0,
-		order_dir: str = "asc",
-		search_value: str = "",
 	) -> Dict[str, Any]:
 		"""
 		Make a POST request to /search-results-ajax with DataTables parameters
