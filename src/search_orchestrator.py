@@ -1,4 +1,3 @@
-import json
 from typing import Dict, Any
 from pprint import pprint
 
@@ -7,6 +6,7 @@ from .rabbitmq_client import RabbitMQClient
 from .email_processor import EmailProcessor
 
 import logging
+import traceback
 
 class SearchOrchestrator:
     """
@@ -14,6 +14,7 @@ class SearchOrchestrator:
     """
     FlightPlanError = "FlightPlanError"
     NoVendorEmailsFound = "NoVendorEmailsFound"
+    UnknownError = "UnknownError"
 
     def __init__(
         self,
@@ -26,7 +27,16 @@ class SearchOrchestrator:
         self.flight_finder = flight_finder
     
     def process_email_external(self, message):
-        self.process_email(message)
+        try:
+            self.process_email(message)
+        except Exception as e:
+            logging.error(f"Error processing email: {e}")
+            self.rabbitmq_client.send_error_message(
+                queues= [self.rabbitmq_client.InternalErrorQueue, self.rabbitmq_client.ManualInterventionQueue],
+                message=message,
+                error_type=self.UnknownError, 
+                **{ "error": str(e), "stacktrace": traceback.format_exc() }
+            )
         
 
     def process_email(self, message):
@@ -59,18 +69,13 @@ class SearchOrchestrator:
 
         logging.info("Validating flight dates ...")
         if not self.email_processor.validate_flight_plan(analysis):           
-            response = { "error": self.FlightPlanError, "email_id": message.get('email_id'), "message": message }
-
 			#  This is so we can investigate the error later
-            self.rabbitmq_client.send_message(
-                queue_name= self.rabbitmq_client.InternalErrorQueue,
-                message=response
-            )
 
             # This is so our frontend can show the user the error, and let them manually intervene
-            self.rabbitmq_client.send_message(
-                queue_name= self.rabbitmq_client.ManualInterventionQueue,
-                message=response
+            self.rabbitmq_client.send_error_message(
+                queues= [self.rabbitmq_client.InternalErrorQueue, self.rabbitmq_client.ManualInterventionQueue],
+                message=message,
+                error_type=self.FlightPlanError,
             )
 
             print("Invalid flight responses - llm needs to get better at handling these")
@@ -83,9 +88,10 @@ class SearchOrchestrator:
         if len(vendor_emails) == 0:
             response = { "error": self.NoVendorEmailsFound, "email_id": message.get('email_id'), "message": message }
 
-            self.rabbitmq_client.send_message(
-                queue_name= self.rabbitmq_client.ManualInterventionQueue,
-                message=response
+            self.rabbitmq_client.send_error_message(
+                queues= [self.rabbitmq_client.ManualInterventionQueue],
+                message=response,
+                error_type=self.NoVendorEmailsFound
             )
 
             logging.info("No vendor emails found")

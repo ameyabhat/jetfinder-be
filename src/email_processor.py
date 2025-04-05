@@ -93,9 +93,6 @@ class EmailProcessor:
 			  Firm trip or General Inquiry: Looking for general info on a route I'm interested in
 		"""
 	
-	
-
-
 		prompt = f"""
 		Analyze the following email and determine if it's a request for chartering a private jet.
 		If it is, extract the following information:

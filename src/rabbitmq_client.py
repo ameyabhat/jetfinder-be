@@ -1,6 +1,6 @@
 import pika
 import json
-from typing import Callable, Dict, Any
+from typing import Callable, Dict, Any, List
 import os
 import time
 import logging
@@ -96,6 +96,16 @@ class RabbitMQClient:
             body=json.dumps(message),
             properties=properties
         )
+
+    def send_error_message(self, queues: List[str], message: Dict[str, Any], error_type: str, **kwargs):
+        response = {
+            "error": error_type,
+            "message": message,
+            **kwargs
+        }
+
+        for q in queues:
+            self.send_message(q, response)
 
     
     def close(self):
