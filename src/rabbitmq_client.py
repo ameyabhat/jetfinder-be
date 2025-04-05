@@ -6,6 +6,15 @@ import time
 import logging
 
 class RabbitMQClient:
+    """
+    This class is responsible for connecting to RabbitMQ and sending and receiving messages
+    """
+
+    InternalErrorQueue = "internal_error"
+    ManualInterventionQueue = "manual_intervention"
+    VendorOutreachQueue = "vendor_outreach"
+    EmailQueue = "email_queue"
+
     def __init__(self, max_retries=5, retry_delay=5):
         self.connection = None
         self.channel = None

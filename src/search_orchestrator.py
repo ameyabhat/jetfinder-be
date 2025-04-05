@@ -12,7 +12,6 @@ class SearchOrchestrator:
     """
     This class is responsible for orchestrating the search for vendor emails
     """
-
     FlightPlanError = "FlightPlanError"
     NoVendorEmailsFound = "NoVendorEmailsFound"
 
@@ -62,19 +61,20 @@ class SearchOrchestrator:
         if not self.email_processor.validate_flight_plan(analysis):           
             response = { "error": self.FlightPlanError, "email_id": message.get('email_id'), "message": message }
 
+			#  This is so we can investigate the error later
             self.rabbitmq_client.send_message(
-                queue_name='internal_error',
+                queue_name= self.rabbitmq_client.InternalErrorQueue,
                 message=response
             )
 
+            # This is so our frontend can show the user the error, and let them manually intervene
             self.rabbitmq_client.send_message(
-                queue_name='manual_intervention',
+                queue_name= self.rabbitmq_client.ManualInterventionQueue,
                 message=response
             )
 
             print("Invalid flight responses - llm needs to get better at handling these")
             return
-
 
 		# This is only finding the vendor emails for the first flight
         logging.info("Searching for vendor emails ...")
@@ -84,7 +84,7 @@ class SearchOrchestrator:
             response = { "error": self.NoVendorEmailsFound, "email_id": message.get('email_id'), "message": message }
 
             self.rabbitmq_client.send_message(
-                queue_name='manual_intervention',
+                queue_name= self.rabbitmq_client.ManualInterventionQueue,
                 message=response
             )
 
@@ -103,7 +103,7 @@ class SearchOrchestrator:
         pprint (response)
         
         self.rabbitmq_client.send_message(
-            queue_name='vendor_outreach',
+            queue_name= self.rabbitmq_client.VendorOutreachQueue,
             message=response
         )
 
@@ -114,6 +114,6 @@ class SearchOrchestrator:
     def consume_emails(self):
         """Start processing emails from the queue"""
         self.rabbitmq_client.consume_messages(
-            queue_name='email_queue',
+            queue_name= self.rabbitmq_client.EmailQueue,
             callback=self.process_email_external
         ) 
