@@ -128,6 +128,7 @@ class EmailProcessor:
 			"is_charter_request": false
 		}}
 
+		<examples>
 		Here's an example of what a private jet charter request looks like:
 		
 		{example_client_request_email}
@@ -143,9 +144,11 @@ class EmailProcessor:
 		Here's what I would expect the completion to be:
 
 		{self.example_client_completion_2}
-
-		Email content:
+		</examples>
+		
+		<content>
 		{email_body}
+		</content>
 		"""
 		
 		response = self.client.chat.completions.create(
