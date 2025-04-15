@@ -110,7 +110,10 @@ class SearchOrchestrator:
 			vendor_emails=vendor_emails,
 			email_analysis=updated_analysis,
 			generated_body=email["body"],
-			subject=email["subject"]
+			subject=email["subject"],
+			radius=radius,
+			plane_size=aircraft_size,
+			number_of_passengers=num_passengers
 		)
 
 		return {
@@ -182,17 +185,6 @@ class SearchOrchestrator:
 		logging.info("Building email ...")
 		email = self.email_processor.build_emil(analysis)
 
-		response = {
-			"vendor_emails": vendor_emails,
-			"email_id": message.get('email_id'),
-			"thread_id": message.get('thread_id'),
-			"user_email": message.get('user_email'),
-			"body": email["body"],
-			"subject": email["subject"]
-		}
-
-		pprint (response)
-
 		self.postgres_client.write_vendor_response(
 			user_email=message.get('user_email'),
 			request_body=email_content,
@@ -200,7 +192,10 @@ class SearchOrchestrator:
 			vendor_emails=vendor_emails,
 			generated_body=email["body"],
 			subject=email["subject"],
-			email_analysis=analysis
+			email_analysis=analysis,
+			radius=0,
+			plane_size=analysis["flights"][0]["aircraft_size"],
+			number_of_passengers=analysis["flights"][0]["passengers"]
 		)
 
 		return vendor_emails

@@ -86,7 +86,10 @@ class PostgresClient:
 		vendor_emails: Optional[List[str]],
 		generated_body: Optional[str],
 		subject: Optional[str],
-		email_analysis: Dict[str, Any]
+		email_analysis: Dict[str, Any],
+		radius: int,
+		plane_size: str,
+		number_of_passengers: int
 	) -> str:
 		"""
 		Write a new vendor response to the database.
@@ -115,8 +118,11 @@ class PostgresClient:
 						"responseBody", 
 						"responseSubject",
 						"updatedAt",
-						"emailAnalysis"
-					) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+						"emailAnalysis",
+						"radius",
+						"planeSize",
+						"numPassengers"
+					) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
 					RETURNING id;
 				""", (
 					user_id,
@@ -126,7 +132,10 @@ class PostgresClient:
 					generated_body,
 					subject,
 					datetime.now(),
-					email_analysis
+					email_analysis,
+					radius,
+					plane_size,
+					number_of_passengers
 				))
 				
 				result = cur.fetchone()
@@ -189,7 +198,10 @@ class PostgresClient:
 		request_body: Optional[str] = None,
 		generated_body: Optional[str] = None,
 		subject: Optional[str] = None,
-		email_analysis: Optional[Dict] = None
+		email_analysis: Optional[Dict] = None,
+		radius: Optional[int] = None,
+		plane_size: Optional[str] = None,
+		number_of_passengers: Optional[int] = None
 	) -> Optional[str]:
 		"""
 		Update a vendor response for a given userId and emailId, only updating fields that are not None (using COALESCE logic).
@@ -205,7 +217,10 @@ class PostgresClient:
 						"responseBody" = COALESCE(%s, "responseBody"),
 						"responseSubject" = COALESCE(%s, "responseSubject"),
 						"updatedAt" = %s,
-						"emailAnalysis" = COALESCE(%s, "emailAnalysis")
+						"emailAnalysis" = COALESCE(%s, "emailAnalysis"),
+						"radius" = COALESCE(%s, "radius"),
+						"planeSize" = COALESCE(%s, "planeSize"),
+						"numPassengers" = COALESCE(%s, "numPassengers")
 					WHERE "userId" = %s AND "emailId" = %s
 					RETURNING id;
 				''', (
@@ -215,6 +230,9 @@ class PostgresClient:
 					subject,
 					datetime.now(),
 					email_analysis,
+					radius,
+					plane_size,
+					number_of_passengers,
 					user_id,
 					email_id
 				))
