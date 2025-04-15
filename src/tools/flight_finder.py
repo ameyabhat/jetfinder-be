@@ -1,7 +1,7 @@
 from enum import Enum
 import logging
 import re
-from typing import Optional, Dict, Any, Union
+from typing import Optional, Dict, Any, Union, List
 import requests
 import os
 from bs4 import BeautifulSoup
@@ -14,16 +14,41 @@ class FlightFinderClient:
 
 	def __init__(self, base_url: Optional[str] = None):
 		self.base_url = base_url or os.getenv('FLIGHT_FINDER_BASE_URL', '')
-		self.ci_session = os.getenv('FLIGHT_FINDER_CI_SESSION', '5f207ba2e44ec7c4c3c2726f7c810ee862ee562c')
+		self.ci_session = os.getenv('FLIGHT_FINDER_CI_SESSION')
 		self.session = requests.Session()  
 		# This is hardcoded for now, but we're going to need to get this from the login page
 		# There's a captcha on the login page that we need to solve, i don't want to deal with that right now
 		self.session.cookies.set(self.CookieCi, self.ci_session)
 
-	def search(self, code: str, pax: int):
-		logging.info("Searching for vendor emails with code: %s and pax: %s", code, pax)
+	def get_aircraft_size(self, aircraft_size: str) -> Optional[int]:
+		jetSizes = {
+			"Ultra Long Range": 20,
+			"Heavy Jet": 1,
+			"Super Midsize Jet": 11,
+			"Midsize Jet": 9,
+			"Light Jet": 8,
+			"Very Light Jet": 14,
+			"Turbo Prop": 12,
+			"Piston Prop": 10,
+		}
+
+		if aircraft_size not in jetSizes:
+			return None  # Default to largest size if unknown
+
+		return jetSizes[aircraft_size]
+
+	def search(self, airportCode: str, numPassengers: int, aircraft_sizes: List[str]):
+		logging.info("Searching for vendor emails with code: %s and pax: %s", airportCode, numPassengers)
+
+
+		size_nums = [size for size in map(self.get_aircraft_size, aircraft_sizes) if size is not None]
+
+		if size_nums:
+			self.search_results(airportCode, pax=numPassengers, flight_sizes=size_nums)
+		else:
+			self.search_results(airportCode, pax=numPassengers)
+
 		# This call is only relevant to set the correct params on the cookie
-		self.search_results(code, pax=pax)
 		htmlResponse = self.search_results_ajax(start=0, length=30)['data']
 		
 		vendorIds = list(set(map(lambda x: int(x), (flatmap(self.parse_search_results, htmlResponse)))))
@@ -69,6 +94,7 @@ class FlightFinderClient:
 		radius: int = 0,
 		pax: str = "Any",
 		yom_min: Optional[str] = None,
+		flight_sizes: Optional[List[int]] = None,
 		rdtype: str = "Category",
 		submit_user: str = "search"
 	) -> str:
@@ -88,6 +114,7 @@ class FlightFinderClient:
 		Returns:
 			Dict containing the API response
 		"""
+
 		url = f"{self.base_url}/search-results"
 		
 		form_data = {
@@ -99,6 +126,9 @@ class FlightFinderClient:
 			"rdtype": rdtype,
 			"submit-user": submit_user
 		}
+
+		if flight_sizes:
+			form_data["category[]"] = flight_sizes
 
 		if yom_min:
 			form_data["yom_min"] = yom_min

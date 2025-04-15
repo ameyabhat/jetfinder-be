@@ -123,6 +123,19 @@ class EmailProcessor:
 			],
 		}}
 
+		'aircraft_size' must be one of the following:
+		{{
+			'Ultra Long Range',
+			'Super Midsize Jet',
+			'Very Light Jet',
+			'Piston Prop',
+			'Midsize Jet',
+			'Turbo Prop',
+			'Light Jet',
+			'Heavy Jet'
+			'Unknown',
+		}}
+
 		If you determine that the email is not a private jet charter request, respond with:
 		{{
 			"is_charter_request": false
