@@ -1,7 +1,8 @@
 from typing import Dict, Any, Optional, Union
 from pprint import pprint
 
-from app import FlightUpdateRequest
+from pydantic import BaseModel
+
 from tools.flight_finder import FlightFinderClient
 from rabbitmq_client import RabbitMQClient
 from email_processor import EmailProcessor
@@ -9,6 +10,14 @@ from postgres_client import PostgresClient
 
 import logging
 import traceback
+
+# Pydantic models for request/response validation
+class FlightUpdateRequest(BaseModel):
+	user_email: str
+	message_id: str
+	plane_size: Optional[str]
+	search_radius: Optional[int]
+	number_of_passengers: Optional[int]
 
 class SearchOrchestrator:
 	"""

@@ -9,7 +9,7 @@ import logging
 from postgres_client import PostgresClient
 from rabbitmq_client import RabbitMQClient
 from email_processor import EmailProcessor
-from search_orchestrator import SearchOrchestrator
+from search_orchestrator import FlightUpdateRequest, SearchOrchestrator
 from tools.flight_finder import FlightFinderClient
 from contextlib import asynccontextmanager
 
@@ -35,13 +35,7 @@ orchestrator = SearchOrchestrator(
   	   postgres_client=db
 )
 
-# Pydantic models for request/response validation
-class FlightUpdateRequest(BaseModel):
-	user_email: str
-	message_id: str
-	plane_size: Optional[str]
-	search_radius: Optional[int]
-	number_of_passengers: Optional[int]
+
 
 class VendorResponseList(BaseModel):
 	responses: List[dict]
