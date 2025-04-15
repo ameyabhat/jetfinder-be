@@ -167,8 +167,10 @@ class SearchOrchestrator:
 			return
 
 		# This is only finding the vendor emails for the first flight
+		starting_flight = analysis["flights"][0]
+
 		logging.info("Searching for vendor emails ...")
-		vendor_emails = self.flight_finder.search(analysis["flights"][0]["origin"], analysis["flights"][0]["passengers"], analysis["flights"][0]["aircraft_size"])
+		vendor_emails = self.flight_finder.search(starting_flight["origin"], starting_flight["passengers"], starting_flight["aircraft_size"])
 
 		if len(vendor_emails) == 0:
 			response = { "error": self.NoVendorEmailsFound, "email_id": message.get('email_id'), "message": message }
@@ -194,8 +196,8 @@ class SearchOrchestrator:
 			subject=email["subject"],
 			email_analysis=analysis,
 			radius=0,
-			plane_size=analysis["flights"][0]["aircraft_size"],
-			number_of_passengers=analysis["flights"][0]["passengers"]
+			plane_size=starting_flight["aircraft_size"],
+			number_of_passengers=starting_flight["passengers"]
 		)
 
 		return vendor_emails
