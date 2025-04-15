@@ -37,16 +37,16 @@ class FlightFinderClient:
 
 		return jetSizes[aircraft_size]
 
-	def search(self, airportCode: str, numPassengers: int, aircraft_sizes: List[str]):
+	def search(self, airportCode: str, numPassengers: int, aircraft_sizes: List[str], radius: int = 0):
 		logging.info("Searching for vendor emails with code: %s and pax: %s", airportCode, numPassengers)
 
 
 		size_nums = [size for size in map(self.get_aircraft_size, aircraft_sizes) if size is not None]
 
 		if size_nums:
-			self.search_results(airportCode, pax=numPassengers, flight_sizes=size_nums)
+			self.search_results(airportCode, pax=numPassengers, flight_sizes=size_nums, radius=radius)
 		else:
-			self.search_results(airportCode, pax=numPassengers)
+			self.search_results(airportCode, pax=numPassengers, radius=radius)
 
 		# This call is only relevant to set the correct params on the cookie
 		htmlResponse = self.search_results_ajax(start=0, length=30)['data']

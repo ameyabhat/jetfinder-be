@@ -3,7 +3,7 @@ import os
 from openai import OpenAI
 from typing import Dict, Any, List, Tuple
 from datetime import datetime
-
+import pytz
 class EmailProcessor:
 	example_client_completion = """
 	{{
@@ -192,10 +192,11 @@ class EmailProcessor:
 
 	def parse_flight_dates(self, flights: List[Dict[str, Any]]) -> List[Tuple[str, any]]:
 		print([fl["travel_date"] for fl in flights])
+
 		parsed_flights = list(map(lambda flight: (
 			flight["origin"], 
 			flight["destination"], 
-			datetime.strptime(flight["travel_date"], "%Y-%m-%d %H:%M UTC").date()
+			datetime.strptime(flight["travel_date"], "%Y-%m-%d %H:%M UTC")
 		), flights))
 
 		fmt_string = '%m/%d/%Y'

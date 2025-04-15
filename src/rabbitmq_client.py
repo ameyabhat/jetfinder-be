@@ -60,12 +60,18 @@ class RabbitMQClient:
             self.connect()
     
     def consume_messages(self, queue_name: str, callback: Callable[[Dict[str, Any]], None]):
+        def callback_wrapper(ch, method, properties, body):
+            if body:
+                callback(json.loads(body))
+            else:
+                logging.warning("Received empty message")
+
         """Start consuming messages from the specified queue"""
         self.ensure_connection()
         self.channel.queue_declare(queue=queue_name, durable=True)
         self.channel.basic_consume(
             queue=queue_name,
-            on_message_callback=lambda ch, method, properties, body: callback(json.loads(body)),
+            on_message_callback=callback_wrapper,
             auto_ack=True
         )
         try:
