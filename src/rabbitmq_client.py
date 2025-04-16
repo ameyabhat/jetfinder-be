@@ -35,6 +35,7 @@ class RabbitMQClient:
                 parameters = pika.ConnectionParameters(
                     host=os.getenv('RABBITMQ_HOST', 'localhost'),
                     port=int(os.getenv('RABBITMQ_PORT', 5672)),
+                    virtual_host=os.getenv('RABBITMQ_VHOST', '/'),
                     credentials=credentials,
                     heartbeat=30,  # Add heartbeat to detect connection issues
                     connection_attempts=3,

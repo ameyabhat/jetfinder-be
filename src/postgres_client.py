@@ -12,7 +12,10 @@ import logging
 class PostgresClient:
 	def __init__(self):
 		load_dotenv()
-		conninfo = f"dbname={os.getenv('DB_NAME')} user={os.getenv('DB_USER')} password={os.getenv('DB_PASSWORD')} host={os.getenv('DB_HOST')} port={os.getenv('DB_PORT')}"
+		if os.getenv('DATABASE_URL') is not None:
+			conninfo = os.getenv('DATABASE_URL')
+		else: 
+			conninfo = f"dbname={os.getenv('DB_NAME')} user={os.getenv('DB_USER')} password={os.getenv('DB_PASSWORD')} host={os.getenv('DB_HOST')} port={os.getenv('DB_PORT')}"
 		# Configure the connection pool with specific settings
 		self.pool = ConnectionPool(
 			conninfo,
