@@ -194,7 +194,7 @@ class SearchOrchestrator:
 			return
 
 		logging.info("Building email ...")
-		email = self.email_processor.build_emil(analysis)
+		email = self.email_processor.build_email(analysis)
 
 		self.postgres_client.write_vendor_response(
 			user_email=message.get('user_email'),

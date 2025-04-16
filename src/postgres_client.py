@@ -4,6 +4,7 @@ from contextlib import contextmanager
 from typing import Any, Generator, List, Optional, Dict
 from dotenv import load_dotenv
 from psycopg import Cursor, Connection
+from psycopg.types.json import Jsonb
 from psycopg_pool import ConnectionPool
 from psycopg.rows import dict_row
 import logging
@@ -56,7 +57,7 @@ class PostgresClient:
 			if conn:
 				self.pool.putconn(conn)
 
-	def get_user_id_by_email(self, email: str) -> Optional[int]:
+	def get_user_id_by_email(self, email: str) -> Optional[str]:
 		"""
 		Get a user's ID by their email address.
 		
@@ -64,7 +65,7 @@ class PostgresClient:
 			email: The email address to look up
 			
 		Returns:
-			Optional[int]: The user ID if found, None otherwise
+			Optional[str]: The user ID if found, None otherwise
 		"""
 		try:
 			with self.get_cursor() as cur:
@@ -132,7 +133,7 @@ class PostgresClient:
 					generated_body,
 					subject,
 					datetime.now(),
-					email_analysis,
+					Jsonb(email_analysis),
 					radius,
 					plane_size,
 					number_of_passengers
@@ -144,27 +145,76 @@ class PostgresClient:
 			logging.error(f"Error writing vendor response: {str(e)}")
 			raise
 
-	def get_all_vendor_responses_for_user(self, user_id: str) -> List[Dict]:
+	def get_vendor_responses_for_user(
+		self,
+		user_id: str,
+		page: int = 1,
+		page_size: int = 10,
+		sort_order: str = 'desc'
+	) -> Dict[str, Any]:
 		"""
-		Get all vendor responses for a given user ID.
+		Get paginated vendor responses for a given user ID.
 		
 		Args:
-			user_id: The ID of the user whose responses to fetch (as a string)
+			user_id: The ID of the user whose responses to fetch.
+			page: The page number to retrieve (1-indexed).
+			page_size: The number of responses per page.
+			sort_order: The order to sort responses ('asc' or 'desc').
 		
 		Returns:
-			List of vendor response records as dictionaries
+			A dictionary containing the list of responses, total count, page number, and total pages.
 		"""
 		try:
 			with self.get_cursor() as cur:
+				# Count total responses for the user
 				cur.execute('''
-					SELECT * FROM "VendorResponse"
-					WHERE "userId" = %s
-					ORDER BY "createdAt" DESC;
+					SELECT COUNT(*) FROM "VendorResponse" WHERE "userId" = %s;
 				''', (user_id,))
-				return cur.fetchall()
+				total_count_result = cur.fetchone()
+				total_count = total_count_result['count'] if total_count_result else 0
+
+				if total_count == 0:
+					return {"responses": [], "total": 0, "page": page, "total_pages": 0}
+
+				# Calculate offset and total pages
+				offset = (page - 1) * page_size
+				total_pages = (total_count + page_size - 1) // page_size
+
+				# Validate page number
+				if page < 1 or page > total_pages:
+					raise ValueError("Invalid page number")
+
+				# Determine sort direction safely
+				if sort_order.lower() == 'asc':
+					sort_clause = 'ORDER BY "createdAt" ASC'
+				else:
+					sort_clause = 'ORDER BY "createdAt" DESC' # Default to DESC
+
+				# Fetch paginated responses using safe parameterization
+				# Build the query string safely, ensuring %s placeholders are literal
+				query = (
+					'SELECT * FROM "VendorResponse" '
+					'WHERE "userId" = %s '
+					+ sort_clause + # Inject the validated sort clause
+					' LIMIT %s OFFSET %s;'
+				)
+				
+				cur.execute(query, (user_id, page_size, offset))
+				responses = cur.fetchall()
+
+				return {
+					"responses": responses,
+					"total": total_count,
+					"page": page,
+					"total_pages": total_pages
+				}
+		except ValueError as ve:
+			logging.warning(f"Invalid request parameters: {str(ve)}")
+			# Return an empty list for invalid page numbers, consistent with API expectations
+			return {"responses": [], "total": total_count if 'total_count' in locals() else 0, "page": page, "total_pages": total_pages if 'total_pages' in locals() else 0}
 		except Exception as e:
-				logging.error(f"Error getting vendor responses for user {user_id}: {str(e)}")
-				raise
+			logging.error(f"Error getting paginated vendor responses for user {user_id}: {str(e)}")
+			raise
 
 	def get_vendor_response_by_user_and_email(self, user_id: str, email_id: str) -> Optional[Dict]:
 		"""
@@ -229,7 +279,7 @@ class PostgresClient:
 					generated_body,
 					subject,
 					datetime.now(),
-					email_analysis,
+					Jsonb(email_analysis) if email_analysis is not None else None,
 					radius,
 					plane_size,
 					number_of_passengers,

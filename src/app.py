@@ -104,7 +104,7 @@ async def recompute_flight_plan(request: FlightUpdateRequest):
 
 @app.get("/vendor-responses/{user_id}", response_model=VendorResponseList)
 async def get_vendor_responses(
-	user_id: int,
+	user_id: str,
 	page: int = 1,
 	page_size: int = 10,
 	sort_order: str = 'desc'
