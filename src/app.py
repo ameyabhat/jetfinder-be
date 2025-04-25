@@ -87,6 +87,25 @@ app.add_middleware(
 async def root():
 	return {"message": "Welcome to JetFinder API"}
 
+@app.get("/health")
+async def health_check():
+	"""
+	Health check endpoint for Fly.io to monitor application health.
+	This endpoint should return a 200 OK response if the application is healthy.
+	"""
+	try:
+		# Check database connection
+		with db.get_connection() as conn:
+			conn.execute("SELECT 1")
+		
+		# Check RabbitMQ connection
+		rabbitmq_client.ensure_connection()
+		
+		return {"status": "healthy", "database": "connected", "rabbitmq": "connected"}
+	except Exception as e:
+		logger.error(f"Health check failed: {str(e)}")
+		raise HTTPException(status_code=503, detail=f"Service unavailable: {str(e)}")
+
 @app.post("/recompute-flight-plan/", response_model=dict)
 async def recompute_flight_plan(request: FlightUpdateRequest):
 	try:
