@@ -3,13 +3,13 @@ from dotenv import load_dotenv
 import uvicorn
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 import logging
+from contracts import VendorResponses, FlightUpdateRequest
 from postgres_client import PostgresClient
 from rabbitmq_client import RabbitMQClient
 from email_processor import EmailProcessor
-from search_orchestrator import FlightUpdateRequest, SearchOrchestrator
+from search_orchestrator import  SearchOrchestrator
 from tools.flight_finder import FlightFinderClient
 from contextlib import asynccontextmanager
 
@@ -35,13 +35,6 @@ orchestrator = SearchOrchestrator(
   	   postgres_client=db
 )
 
-
-
-class VendorResponseList(BaseModel):
-	responses: List[dict]
-	total: int
-	page: int
-	total_pages: int
 
 def run_rabbitmq():
 	"""Run the RabbitMQ consumer"""
@@ -106,7 +99,7 @@ async def health_check():
 		logger.error(f"Health check failed: {str(e)}")
 		raise HTTPException(status_code=503, detail=f"Service unavailable: {str(e)}")
 
-@app.post("/recompute-flight-plan/", response_model=dict)
+@app.post("/recompute-flight-plan", response_model=dict)
 async def recompute_flight_plan(request: FlightUpdateRequest):
 	try:
 		response = orchestrator.update_flight_search(request)
@@ -119,9 +112,8 @@ async def recompute_flight_plan(request: FlightUpdateRequest):
 			return response
 	except Exception as e:
 		logger.error(f"Error creating vendor response: {str(e)}")
-		raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/vendor-responses/{user_id}", response_model=VendorResponseList)
+		raise 
+@app.get("/vendor-responses/{user_id}", response_model=VendorResponses)
 async def get_vendor_responses(
 	user_id: str,
 	page: int = 1,

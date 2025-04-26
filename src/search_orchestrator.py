@@ -1,8 +1,8 @@
-from typing import Dict, Any, Optional, Union
-from pprint import pprint
+import pprint
+from typing import Dict, Any, Union
 
-from pydantic import BaseModel
 
+from contracts import FlightUpdateRequest
 from tools.flight_finder import FlightFinderClient
 from rabbitmq_client import RabbitMQClient
 from email_processor import EmailProcessor
@@ -11,14 +11,6 @@ from postgres_client import PostgresClient
 import logging
 import traceback
 
-# Pydantic models for request/response validation
-class FlightUpdateRequest(BaseModel):
-	user_email: str
-	message_id: str
-	plane_size: Optional[str]
-	search_radius: Optional[int]
-	number_of_passengers: Optional[int]
-
 class SearchOrchestrator:
 	"""
 	This class is responsible for orchestrating the search for vendor emails
@@ -26,8 +18,6 @@ class SearchOrchestrator:
 	FlightPlanError = "FlightPlanError"
 	NoVendorEmailsFound = "NoVendorEmailsFound"
 	UnknownError = "UnknownError"
-
-
 
 	def __init__(
 		self,
@@ -62,24 +52,22 @@ class SearchOrchestrator:
 		#  What does this endpoint need to do?
 		#  I should accept an email_id, user_id, plane_size, search_radius, number of passengers
 		# Why don't I store the contents of the analysis in the database - then I can just look up the origin, number of passengers, 
-		vendor_response = self.postgres_client.get_vendor_response_by_user_and_email(request.user_email, request.message_id)
+		vendor_response = self.postgres_client.get_vendor_response_by_user_and_email(request.user_id, request.message_id)
 
 		if not vendor_response:
-			logging.error(f"No charter email matching this id was found for user {request.user_email} and email {request.message_id}")
+			logging.error(f"No charter email matching this id was found for user {request.user_id} and email {request.message_id}")
 			return self.UnknownError
 
 		analysis = vendor_response.get('emailAnalysis')
-		if not analysis:
-			logging.error(f"No analysis found for user {request.user_email} and email {request.message_id}")
-			return self.UnknownError
 
-		# Ok here's the plan:
-		passengers = request.number_of_passengers
+		if not analysis:
+			logging.error(f"No analysis found for user {request.user_id} and email {request.message_id}")
+			return self.UnknownError
 
 		flights = analysis.get('flights')
 
 		if not flights:
-			logging.error(f"malformed analysis for user {request.user_email} and email {request.message_id}")
+			logging.error(f"malformed analysis for user {request.user_id} and email {request.message_id}")
 			return self.UnknownError
 
 		flight_origin = flights[0].get('origin')
@@ -91,19 +79,21 @@ class SearchOrchestrator:
 		radius = request.search_radius or 0
 
 
+		print(flight_origin, num_passengers, [aircraft_size], radius)
 		vendor_emails = self.flight_finder.search(flight_origin, num_passengers, [aircraft_size], radius)
 
 		if len(vendor_emails) == 0:
-			logging.error(f"No vendor emails found for user {request.user_email} and email {request.message_id}")
+			logging.error(f"No vendor emails found for user {request.user_id} and email {request.message_id}")
 			return self.NoVendorEmailsFound
 		
+		pprint.pprint(flights)
 		
 		updated_flights = [{
-			"origin": f.origin,
-			"destination": f.destination,
-			"travel_date": f.travel_date,
-			"passengers": num_passengers or f.passengers,
-			"aircraft_size": aircraft_size or f.aircraft_size
+			"origin": f.get('origin'),
+			"destination": f.get('destination'),
+			"travel_date": f.get('travel_date'),
+			"passengers": num_passengers or f.get('passengers'),
+			"aircraft_size": aircraft_size or f.get('aircraft_size')
 		} for f in flights]
 
 		updated_analysis = {
@@ -114,7 +104,7 @@ class SearchOrchestrator:
 		email = self.email_processor.build_email(updated_analysis)
 
 		self.postgres_client.update_vendor_response(
-			user_id=request.user_email,
+			user_id=request.user_id,
 			email_id=request.message_id,
 			vendor_emails=vendor_emails,
 			email_analysis=updated_analysis,
@@ -125,12 +115,14 @@ class SearchOrchestrator:
 			number_of_passengers=num_passengers
 		)
 
-		return {
-			"vendor_emails": vendor_emails,
-			"body": email["body"],
-			"subject": email["subject"]
-		}
-	
+		response = self.postgres_client.get_vendor_response_by_user_and_email(request.user_id, request.message_id)
+
+		if not response:
+			logging.error(f"No vendor response found for user {request.user_id} and email {request.message_id} after response")
+			return self.UnknownError
+			
+
+		return response
 
 
 	def process_email(self, message):
@@ -179,7 +171,8 @@ class SearchOrchestrator:
 		starting_flight = analysis["flights"][0]
 
 		logging.info("Searching for vendor emails ...")
-		vendor_emails = self.flight_finder.search(starting_flight["origin"], starting_flight["passengers"], starting_flight["aircraft_size"])
+		print(starting_flight["aircraft_size"])
+		vendor_emails = self.flight_finder.search(starting_flight["origin"], starting_flight["passengers"], [starting_flight["aircraft_size"]])
 
 		if len(vendor_emails) == 0:
 			response = { "error": self.NoVendorEmailsFound, "email_id": message.get('email_id'), "message": message }
