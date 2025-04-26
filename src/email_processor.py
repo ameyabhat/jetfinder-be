@@ -207,7 +207,7 @@ class EmailProcessor:
 		body_dates = f"{parsed_flights[0][2].strftime(body_fmt_string)}"
 
 		for i in range(1, len(parsed_flights)):
-			route += f" - {parsed_flights[i][0]}"
+			route += f" - {parsed_flights[i][1]}"
 			dates += f" - {parsed_flights[i][2].strftime(fmt_string)}"
 			body_dates += f" - {parsed_flights[i][2].strftime(body_fmt_string)}"
 		
