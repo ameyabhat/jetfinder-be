@@ -222,16 +222,12 @@ class EmailProcessor:
 
 		if len(flight_info["flights"]) == 1:
 			return True
-		
-		for flight in flight_info["flights"]:
-			if last_date is None:
-				last_date = flight["travel_date"]
-			else:
-				if flight["travel_date"] > last_date:
-					last_date = flight["travel_date"]
-				else: 
-					return False
-				
+
+		flights = flight_info["flights"]
+		# Sort flights by travel_date in ascending order
+		flights.sort(key=lambda x: x["travel_date"])
+
+		for flight in flights:
 			if last_destination is None:
 				last_destination = flight["destination"]
 			else:

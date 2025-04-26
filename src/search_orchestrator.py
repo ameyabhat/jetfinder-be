@@ -184,7 +184,6 @@ class SearchOrchestrator:
 			)
 
 			logging.info("No vendor emails found")
-			return
 
 		logging.info("Building email ...")
 		email = self.email_processor.build_email(analysis)
