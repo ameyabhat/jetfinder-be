@@ -21,6 +21,7 @@ class FlightFinderClient:
 		self.session.cookies.set(self.CookieCi, self.ci_session)
 
 	def get_aircraft_size(self, aircraft_size: str) -> Optional[int]:
+		print("aircraft_size", aircraft_size)
 		jetSizes = {
 			"Ultra Long Range": 20,
 			"Heavy Jet": 1,
@@ -29,8 +30,9 @@ class FlightFinderClient:
 			"Light Jet": 8,
 			"Very Light Jet": 14,
 			"Turbo Prop": 12,
-			"Piston Prop": 10,
+			"Piston Prop": 10
 		}
+		print(jetSizes.get(aircraft_size))
 
 		if aircraft_size not in jetSizes:
 			return None  # Default to largest size if unknown
@@ -40,7 +42,7 @@ class FlightFinderClient:
 	def search(self, airportCode: str, numPassengers: int, aircraft_sizes: List[str], radius: int = 0):
 		logging.info("Searching for vendor emails with code: %s and pax: %s", airportCode, numPassengers)
 
-
+		print(aircraft_sizes)
 		size_nums = [size for size in map(self.get_aircraft_size, aircraft_sizes) if size is not None]
 
 		if size_nums:

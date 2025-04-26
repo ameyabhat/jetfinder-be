@@ -133,7 +133,7 @@ class EmailProcessor:
 			'Turbo Prop',
 			'Light Jet',
 			'Heavy Jet'
-			'Unknown',
+			'Any',
 		}}
 
 		If you determine that the email is not a private jet charter request, respond with:
