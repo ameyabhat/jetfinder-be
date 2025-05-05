@@ -56,6 +56,7 @@ class FlightFinderClient:
 		vendorIds = list(set(map(lambda x: int(x), (flatmap(self.parse_search_results, htmlResponse)))))
 
 		vendorEmails = list(map(self.extract_mailto, map(self.get_vendor_details, vendorIds)))
+		print("vendorEmails", htmlResponse)
 
 		return vendorEmails
 
@@ -137,6 +138,7 @@ class FlightFinderClient:
 		
 		try:
 			response = self.session.post(url, data=form_data)
+			print("response", response.text)
 			response.raise_for_status()  # Raise an exception for bad status codes
 			self.ci_cookie = response.cookies.get(self.CookieCi)
 			return response.text

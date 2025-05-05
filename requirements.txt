@@ -40,8 +40,8 @@ psycopg-pool==3.2.6
 psycopg2-binary==2.9.10
 ptyprocess==0.7.0
 pure_eval==0.2.3
-pydantic==2.7.1
-pydantic_core==2.18.2
+pydantic==2.11.4
+pydantic_core==2.33.2
 Pygments==2.19.1
 pymongo==4.11.3
 python-dateutil==2.9.0.post0
@@ -61,3 +61,8 @@ typing_extensions==4.13.1
 urllib3==2.3.0
 uvicorn==0.34.1
 wcwidth==0.2.13
+
+# Multi-agent & LLM orchestration
+langchain==0.3.25
+langgraph==0.4.1
+langgraph-supervisor==0.0.20

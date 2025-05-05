@@ -8,6 +8,7 @@ from psycopg.types.json import Jsonb
 from psycopg_pool import ConnectionPool
 from psycopg.rows import dict_row
 import logging
+import uuid
 
 class PostgresClient:
 	def __init__(self):
@@ -294,3 +295,85 @@ class PostgresClient:
 		except Exception as e:
 				logging.error(f"Error updating vendor response for user {user_id} and email_id {email_id}: {str(e)}")
 				raise
+
+	def write_processing_result(
+		self,
+		*,
+		user_email: str,
+		email_id: str,
+		provider: str,
+		result_type: str,
+		payload: Dict[str, Any],
+	) -> str:
+		"""Generic method to persist any provider processing outcome."""
+		try:
+			user_id = self.get_user_id_by_email(user_email)
+			if not user_id:
+				raise ValueError(f"User with email {user_email} not found")
+
+			with self.get_cursor(commit=True) as cur:
+				new_id = str(uuid.uuid4())
+				cur.execute(
+					"""
+					INSERT INTO "EmailProcessingResult" (
+					    id,
+						"userId",
+						"emailId",
+						provider,
+						"resultType",
+						payload,
+						"createdAt",
+						"updatedAt"
+					) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+					RETURNING id;
+					""",
+					(
+					    new_id,
+						user_id,
+						email_id,
+						provider,
+						result_type,
+						Jsonb(payload),
+						datetime.now(),
+						datetime.now(),
+					),
+				)
+				row = cur.fetchone()
+				return row["id"] if row else None
+		except Exception as e:
+			logging.error(f"Error writing processing result: {str(e)}")
+			raise
+
+	def get_processing_results_for_user(
+		self,
+		user_id: str,
+		result_type: str | None = None,
+		page: int = 1,
+		page_size: int = 10,
+	) -> Dict[str, Any]:
+		"""Paginated fetch from EmailProcessingResult."""
+		try:
+			with self.get_cursor() as cur:
+				params = [user_id]
+				where_clause = '"userId" = %s'
+				if result_type:
+					where_clause += ' AND "resultType" = %s'
+					params.append(result_type)
+
+				cur.execute(f'SELECT COUNT(*) FROM "EmailProcessingResult" WHERE {where_clause};', params)
+				total = cur.fetchone()["count"]
+				if total == 0:
+					return {"results": [], "total": 0, "page": page, "total_pages": 0}
+
+				offset = (page - 1) * page_size
+				total_pages = (total + page_size - 1) // page_size
+				params.extend([page_size, offset])
+				cur.execute(
+					f'SELECT * FROM "EmailProcessingResult" WHERE {where_clause} ORDER BY "createdAt" DESC LIMIT %s OFFSET %s;',
+					params,
+				)
+				rows = cur.fetchall()
+				return {"results": rows, "total": total, "page": page, "total_pages": total_pages}
+		except Exception as e:
+			logging.error(f"Error fetching processing results: {str(e)}")
+			raise
