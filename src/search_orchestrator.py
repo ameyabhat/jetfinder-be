@@ -80,6 +80,7 @@ class SearchOrchestrator:
 
 
 		print(flight_origin, num_passengers, [aircraft_size], radius)
+
 		vendor_emails = self.flight_finder.search(flight_origin, num_passengers, [aircraft_size], radius)
 
 		if len(vendor_emails) == 0:
@@ -171,8 +172,24 @@ class SearchOrchestrator:
 		starting_flight = analysis["flights"][0]
 
 		logging.info("Searching for vendor emails ...")
-		print(starting_flight["aircraft_size"])
-		vendor_emails = self.flight_finder.search(starting_flight["origin"], starting_flight["passengers"], [starting_flight["aircraft_size"]])
+
+		radius = 0
+		max_radius = 250
+		radius_increment = 50
+		vendor_emails = []
+
+		while len(vendor_emails) == 0 and radius <= max_radius:
+			logging.info(f"Searching for vendor emails with radius {radius}...")
+			vendor_emails = self.flight_finder.search(
+				starting_flight["origin"], 
+				starting_flight["passengers"], 
+				[starting_flight["aircraft_size"]],
+				radius=radius
+			)
+			
+			if len(vendor_emails) == 0:
+				radius += radius_increment
+				logging.info(f"No results found, increasing radius to {radius}")
 
 		if len(vendor_emails) == 0:
 			response = { "error": self.NoVendorEmailsFound, "email_id": message.get('email_id'), "message": message }
