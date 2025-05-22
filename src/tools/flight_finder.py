@@ -51,11 +51,11 @@ class FlightFinderClient:
 			self.search_results(airportCode, pax=numPassengers, radius=radius)
 
 		# This call is only relevant to set the correct params on the cookie
-		htmlResponse = self.search_results_ajax(start=0, length=30)['data']
+		htmlResponse = self.search_results_ajax(start=0, length=400)['data']
 		
 		vendorIds = list(set(map(lambda x: int(x), (flatmap(self.parse_search_results, htmlResponse)))))
 
-		vendorEmails = list(map(self.extract_mailto, map(self.get_vendor_details, vendorIds)))
+		vendorEmails = list(set(map(self.extract_mailto, map(self.get_vendor_details, vendorIds))))
 
 		return vendorEmails
 
